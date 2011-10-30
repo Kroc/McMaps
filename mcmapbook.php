@@ -36,13 +36,14 @@ class McMapBook {
 		//? - assumed free
 		'Pixel Explosion'	=> array ('pts' => 5, 'h' => 8,  'ttf' => 'XPAIDERP')
 	);
-	
-	public $font;
+	public $font;		//set to one of those above (the array element, not just the name)
 	
 	public $padding = 8;	//space to reserve from the writing to the edge of the page
 	
 	public $path    = '';	//the full path to the data folder to write the maps into
 	public $map_id  = 0;	//the map number to begin writing at
+	
+	public $verbose = false;
 	
 	function __construct ($path, $map_id = 0) {
 		//set default font
@@ -70,13 +71,13 @@ class McMapBook {
 			$words = explode (' ', $line);
 			while ($word = current ($words)) {
 				//replace tab chars with four spaces
-				$word = str_replace("\t", "    ", $word);
+				$word = str_replace ("\t", "    ", $word);
 				
 				//will this word fit on the end of the line?
 				if ($x + $this->textWidth ($word) > 128 - ($this->padding * 2)) {
 					//carriage return
 					$y++; $x = 0;
-					echo "\n";
+					if ($this->verbose) echo "\n";
 					
 					//is the page full?
 					if (($y+1) * $this->font['h'] >= 128) {
@@ -88,7 +89,7 @@ class McMapBook {
 				
 				//write the word
 				$this->writeText ($map, $this->padding + $x, $y * $this->font['h'], 55, $word);
-				echo "$word ";
+				if ($this->verbose) echo "$word ";
 				
 				//proceed to the next word
 				$x += $this->textWidth ($word) + $space; next ($words);
@@ -96,7 +97,7 @@ class McMapBook {
 			
 			//line-break
 			next ($lines); $y++; $x = 0;
-			echo "\n";
+			if ($this->verbose) echo "\n";
 			
 			//is the page full?
 			if (current ($lines) && $y * $this->font['h'] >= 128) {
@@ -115,7 +116,7 @@ class McMapBook {
 	private function newPage ($page) {
 		$map = new McMap ();
 		
-		echo "\nPage $page:\n";
+		if ($this->verbose) echo "\nPage $page:\n";
 		
 		//right align page number
 		$map->writeText (
@@ -128,6 +129,7 @@ class McMapBook {
 	
 	private function savePage (&$map, $page) {
 		$id = $this->map_id + ($page - 1);
+		if ($this->verbose) imagepng ($map->image, "map_$id.png", 9);
 		return $map->save ($this->path."map_$id.dat");
 	}
 	
