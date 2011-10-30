@@ -15,6 +15,8 @@ class McMap {
 	public $image;			//the GD image handle
 	public $palette = array ();	//Notch’s palette for map items
 	
+	/* ============================================================================================================== */
+	
 	function __construct () {
 		//instantiate a new NBT strucutre
 		$this->nbt = new NBT ();
@@ -46,10 +48,11 @@ class McMap {
 		//assign the colour palette
 		foreach (array (
 			//see <minecraftwiki.net/wiki/Map_Item_Format#Color_table>
-			array ('r' => 0,	'g' => 0,	'b' => 0), 	//0  Not explored
-			array ('r' => 0,	'g' => 0,	'b' => 0),	//1  Not explored
-			array ('r' => 0,	'g' => 0,	'b' => 0),	//2  Not explored
-			array ('r' => 0,	'g' => 0,	'b' => 0),	//3  Not explored
+			array ('r' => 255,	'g' => 255,	'b' => 255), 	//0  Not explored
+			array ('r' => 255,	'g' => 0,	'b' => 255),	//1  Not explored
+			array ('r' => 255,	'g' => 0,	'b' => 255),	//2  Not explored
+			array ('r' => 255,	'g' => 0,	'b' => 255),	//3  Not explored
+			
 			array ('r' => 89,	'g' => 125,	'b' => 39),	//4  Grass
 			array ('r' => 109,	'g' => 153,	'b' => 48),	//5  Grass
 			array ('r' => 127,	'g' => 178,	'b' => 56),	//6  Grass
@@ -109,6 +112,14 @@ class McMap {
 		imagecolortransparent ($this->image, $this->palette[0]);
 	}
 	
+	function __destruct () {
+		//release handles, everything else should go away by itself
+		unset ($this->nbt);
+		imagedestroy ($this->image);
+	}
+	
+	/* ============================================================================================================== */	
+	
 	public function writeText ($x, $y, $color_id, $ttf, $pts, $text) {
 		return imagettftext (
 			//the negative version of the colour index turns anti-aliasing off (crashes Minecraft otherwise)
@@ -141,10 +152,24 @@ class McMap {
 		return $this->nbt->writeFile ($file);
 	}
 	
-	function __destruct () {
-		//release handles, everything else should go away by itself
-		unset ($this->nbt);
-		imagedestroy ($this->image);
+	/* setImage: resize & palettize a GD image source onto the map
+	   -------------------------------------------------------------------------------------------------------------- */
+	public function setImage ($src) {
+		//resize the source image to 128x128
+		$buffer = imagecreatetruecolor (128, 128);
+		imagecopyresized ($buffer, $src, 0, 0, 0, 0, 128, 128, imagesx ($src), imagesy ($src));
+		
+		//copy the image pixel-by-pixel to the map, changing the colours to fit Minecraft
+		for ($y=0; $y < 128; $y++) for ($x=0; $x < 128 ; $x++) {
+			//get the 32-bit colour
+			$c = imagecolorsforindex ($src, imagecolorat ($src, $x, $y));
+			//draw it, using the closest color in the Minecraft map palette
+			imagesetpixel (
+				$this->image, $x, $y,
+				imagecolorclosestalpha ($this->image, $c['red'], $c['green'], $c['blue'], $c['alpha'])
+			);
+		}
+		unset ($buffer);
 	}
 }
 

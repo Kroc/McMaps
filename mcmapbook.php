@@ -73,7 +73,7 @@ class McMapBook {
 	
 	private function savePage () {
 		$id = $this->map_id + ($this->page - 1);
-		if ($this->verbose) imagepng ($this->map->image, "map_$id.png", 9);
+		if ($this->verbose) imagepng ($this->map->image, $this->path."map_$id.png", 9);
 		return $this->map->save ($this->path."map_$id.dat");
 	}
 	
@@ -117,15 +117,17 @@ class McMapBook {
 			
 			switch ($word) {
 			case "\n":
+				//newline
 				if ($this->verbose) echo "\n";
 				$y++; $x = 0;
 				
+				//is the page full?
 				if (($y+1) * $this->font['h'] >= 128) {
 					//start a new page
 					$this->nextPage ();
 					$x = 0; $y = 3;
-					continue;
 				}
+				continue;
 				
 			default:
 				//will this word fit on the end of the line?
