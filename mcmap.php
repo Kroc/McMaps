@@ -7,7 +7,7 @@
 require_once 'nbt/nbt.class.php';
 
 //set font directory
-putenv ('GDFONTPATH='.realpath ('./fonts'));
+putenv ('GDFONTPATH='.realpath (dirname (__FILE__).'/fonts'));
 
 class McMap {
 	private $nbt;			//the NBT class for reading/writing the file structure
