@@ -1,28 +1,25 @@
 <?php
 
-/* a script to write text to a Minecraft map file.
+/* a class to read and write Minecraft map item files
    copyright © cc-by 2011 Kroc Camen <camendesign.com>
    uses NBT Decoder / Encoder for PHP by Justin Martin */
 
 require_once 'nbt/nbt.class.php';
 
+//set font directory
+putenv ('GDFONTPATH='.realpath ('./fonts'));
+
 class McMap {
-	public $map;			//the NBT class for reading/writing the file structure
+	private $nbt;			//the NBT class for reading/writing the file structure
+	
 	public $image;			//the GD image handle
-	
-	private $palette = array ();	//Notch’s palette for map items
-	
-	public $fonts = array (
-		//pts = GD points size (instead of px), h = line height
-		'alicia_marie'	=> array ('pts' => 6, 'h' => 8, 'ttf' => 'alicia_marie/alicia_marie')
-	);
+	public $palette = array ();	//Notch’s palette for map items
 	
 	function __construct () {
 		//instantiate a new NBT strucutre
-		$this->map = new NBT ();
-		$this->map->verbose = true;
+		$this->nbt = new NBT ();
 		//populate the default data for a Minecraft map item
-		$this->map->root[0] = array ('name' => '', 'type' => NBT::TAG_COMPOUND, 'value' => array (
+		$this->nbt->root[0] = array ('name' => '', 'type' => NBT::TAG_COMPOUND, 'value' => array (
 			array ('name' => 'data', 'type' => NBT::TAG_COMPOUND, 'value' => array (
 				//1:1 zoom
 				array ('name' => 'scale',	'type' => NBT::TAG_BYTE, 	'value' => 0),
@@ -108,30 +105,45 @@ class McMap {
 		) as $colour)
 			$this->palette[] = imagecolorallocate ($this->image, $colour['r'], $colour['g'], $colour['b'])
 		;
-		
-		//set font directory
-		putenv ('GDFONTPATH='.realpath ('./fonts'));
+		//the ‘void’
+		imagecolortransparent ($this->image, $this->palette[0]);
 	}
 	
-	public function writeText ($x, $y, $color_id, $font, $text) {
-		//the negative version of the colour index turns anti-aliasing off (crashes Minecraft otherwise)
+	public function writeText ($x, $y, $color_id, $ttf, $pts, $text) {
 		return imagettftext (
-			$this->image, $font['pts'], 0, $x, $y, -1*abs ($this->palette[$color_id]), $font['ttf'], $text
+			//the negative version of the colour index turns anti-aliasing off (crashes Minecraft otherwise)
+			$this->image, $pts, 0, $x, $y, -1 * $this->palette[$color_id], $ttf, $text
 		);
 	}
 	
+	/* load: read in a map file and paint it onto the GD image for further manipulation
+	   ---------------------------------------------------------------------------------------------------------------*/
+	public function load ($file) {
+		$this->nbt->purge ();
+		$this->nbt->loadFile ($file);
+		
+		//which element is the 'colors' array?
+		foreach ($this->nbt->root[0]['value'][0]['value'] as &$node) if ($node['name'] == 'colors') break;
+		
+		for ($y=0; $y < 128; $y++) for ($x=0; $x < 128 ; $x++)
+			@imagesetpixel ($this->image, $x, $y, $this->palette[$node['value'][$x + ($y*128)]])
+		;
+	}
+	
+	/* save: take the GD image, put it into the byte array, and save to disk
+	   -------------------------------------------------------------------------------------------------------------- */
 	public function save ($file) {
 		//update the image data in the NBT:
 		for ($y=0; $y < 128; $y++) for ($x=0; $x < 128 ; $x++)
-			$this->map->root[0]['value'][0]['value'][6]['value'][$x + ($y*128)] = imagecolorat ($this->image, $x, $y)
+			$this->nbt->root[0]['value'][0]['value'][6]['value'][$x + ($y*128)] = imagecolorat ($this->image, $x, $y)
 		;
 		//save the NBT file to disk
-		return $this->map->writeFile ($file);
+		return $this->nbt->writeFile ($file);
 	}
 	
 	function __destruct () {
 		//release handles, everything else should go away by itself
-		unset ($this->map);
+		unset ($this->nbt);
 		imagedestroy ($this->image);
 	}
 }

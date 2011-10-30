@@ -1,0 +1,29 @@
+Fonts:
+
+./04b03/
+"04b-03" - Copyright © 1998-2003 Yuji Yoshimoto - <dsg4.com/04>
+'Freeware - You may use them as you like'
+
+./alicia_marie/
+"Alicia Marie" - Alicia Rios
+'Free for personal use'
+
+./cazoom.ttf
+"CaZOOM" - Sara Batchelor
+'Free for personal use'
+
+./handy00.ttf
+"Handy" - Cal Henderson - <iamcal.com/misc/fonts>
+'Free'
+
+./nayupixel.ttf
+"Nayupixel" - Nathalie D. - <twitter.com/nnathaliee>
+'Free for personal use'
+
+./uni_05_x/
+Uni 05 - Craig Kroeger - <miniml.com>
+'free to use in commercial or personal work'
+
+./XPAIDERP.TTF
+Pixel Explosion 01 - Xpaider
+? - assumed free
