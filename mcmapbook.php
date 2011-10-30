@@ -30,7 +30,7 @@ class McMapBook {
 		
 		//Uni 05 - Craig Kroeger - <miniml.com>
 		//'free to use in commercial or personal work'
-		'Uni 05'		=> array ('pts' => 6, 'h' => 8,  'ttf' => 'uni_05_x/uni05_53'),
+		'Uni 05'		=> array ('pts' => 6, 'h' => 7,  'ttf' => 'uni_05_x/uni05_53'),
 		
 		//Pixel Explosion 01 - Xpaider
 		//? - assumed free
@@ -42,7 +42,7 @@ class McMapBook {
 	public $padding = 8;	//space to reserve from the writing to the edge of the page
 	
 	public $path    = '';	//the full path to the data folder to write the maps into
-	public $map_id  = 0;
+	public $map_id  = 0;	//the map number to begin writing at
 	
 	function __construct ($path, $map_id = 0) {
 		//set default font
@@ -72,16 +72,16 @@ class McMapBook {
 				//replace tab chars with four spaces
 				$word = str_replace("\t", "    ", $word);
 				
-				//will this word fit on the end of the line? if not, word wrap
+				//will this word fit on the end of the line?
 				if ($x + $this->textWidth ($word) > 128 - ($this->padding * 2)) {
 					//carriage return
 					$y++; $x = 0;
 					echo "\n";
 					
 					//is the page full?
-					if ($y * $this->font['h'] >= 128) {
+					if (($y+1) * $this->font['h'] >= 128) {
 						//start a new page
-						$map = $this->nextPage ($map, &$page);
+						$map = $this->nextPage ($map, $page);
 						$x = 0; $y = 2;
 					}
 				}
@@ -128,8 +128,7 @@ class McMapBook {
 	
 	private function savePage (&$map, $page) {
 		$id = $this->map_id + ($page - 1);
-		imagepng ($map->image, "map_$id.png", 9);
-		return $map->save ("/Users/kroc/Library/Application Support/minecraft/saves/Island/data/map_$id.dat");
+		return $map->save ($this->path."map_$id.dat");
 	}
 	
 	private function nextPage (&$map, &$page) {
