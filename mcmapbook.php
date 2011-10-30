@@ -5,6 +5,12 @@
    uses NBT Decoder / Encoder for PHP by Justin Martin */
 
 class McMapBook {
+	public $path    = '';		//the full path to the data folder to write the maps into
+	public $map_id  = 0;		//the map number to begin writing at
+	
+	public $padding = 8;		//space to reserve from the writing to the edge of the page
+	public $colour  = 55;		//text colour index, according to palette (see 'mcmap.php')
+	
 	public $fonts = array (
 		//(note: ['pts'] = GD points size (instead of px), ['h'] = line height)
 		
@@ -36,14 +42,16 @@ class McMapBook {
 		//? - assumed free
 		'Pixel Explosion'	=> array ('pts' => 5, 'h' => 8,  'ttf' => 'XPAIDERP')
 	);
-	public $font;		//set to one of those above (the array element, not just the name)
+	//set to one of those above (the array element, not just the name)
+	public $font;
 	
-	public $padding = 8;	//space to reserve from the writing to the edge of the page
+	public $hypenate = true;	//should I hypenate words to fit them in?
+	public $verbose = false;	//output progress
 	
-	public $path    = '';	//the full path to the data folder to write the maps into
-	public $map_id  = 0;	//the map number to begin writing at
+	/* ================================================================================================== PRIVATE === */
 	
-	public $verbose = false;
+	private $map;			//the current page image
+	private $page;			//the current page number
 	
 	function __construct ($path, $map_id = 0) {
 		//set default font
@@ -54,19 +62,56 @@ class McMapBook {
 		$this->map_id = $map_id;
 	}
 	
+	private function newPage () {
+		$this->map = new McMap ();
+		
+		if ($this->verbose) echo "\nPage ".$this->page.":\n";
+		
+		//right align page number
+		$this->writeText (128 - $this->padding - $this->textWidth ($this->page), $this->font['h'], $this->page);
+	}
+	
+	private function savePage () {
+		$id = $this->map_id + ($this->page - 1);
+		if ($this->verbose) imagepng ($this->map->image, "map_$id.png", 9);
+		return $this->map->save ($this->path."map_$id.dat");
+	}
+	
+	private function nextPage () {
+		//output and destroy the old page
+		$this->savePage ($this->page);
+		unset ($this->map);
+		
+		//create next page
+		$this->page++;
+		$this->newPage ();
+	}
+	
+	private function textWidth ($text) {
+		$box = imagettfbbox ($this->font['pts'], 0, $this->font['ttf'], $text);
+		return $box[2] - $box[6];
+	}
+	
+	private function writeText ($x, $y, $text) {
+		return $this->map->writeText ($x, $y, $this->colour, $this->font['ttf'], $this->font['pts'], $text);
+	}
+	
+	/* =================================================================================================== PUBLIC === */
+	
 	public function generate ($text) {
-		//width of a space
+		//for convenience, remember the widths of these characters
 		$space = $this->textWidth (' ');
+		$hypen = $this->textWidth ('-');
 		
-		$page = 1;	//current page number
-		$x    = 0;	//current insertion point across the page, in pixels
-		$y    = 2;	//current line number (not px) down the page
+		//start afresh
+		$this->page = 1;
+		$this->newPage ($page);
 		
-		$map = $this->newPage ($page);
+		$x = 0;	//current insertion point across the page, in pixels
+		$y = 2;	//current line number (not px) down the page
 		
 		//split into lines of text
-		$lines = explode ("\n", $text);
-		foreach ($lines as $line) {
+		foreach ($lines = explode ("\n", $text) as $line) {
 			//split into individual words
 			$words = explode (' ', $line);
 			while ($word = current ($words)) {
@@ -74,21 +119,53 @@ class McMapBook {
 				$word = str_replace ("\t", "    ", $word);
 				
 				//will this word fit on the end of the line?
-				if ($x + $this->textWidth ($word) > 128 - ($this->padding * 2)) {
+				if ($x + $this->textWidth ($word) > 128-($this->padding * 2)) {
+					//no; is the page full?
+					//(check before hypenating so as to not hyphenate between pages)
+					if (($y+2) * $this->font['h'] >= 128) {
+						//start a new page
+						$this->nextPage ();
+						$x = 0; $y = 2;
+						
+					//no; can we hyphenate this word?
+					} elseif ($this->hypenate && mb_strlen ($word) >= 6) {
+						//work backwards from word length determining at what point it fits
+						//(note: word cannot be broken before the second letter, and cannot end
+						//       with less than 2 letters on the new line)
+						for ($i=mb_strlen ($word, 'UTF-8')-1; $i>2; $i--) if (
+							//I’m not really testing for anything here, just compacting code
+							$split = mb_substr ($word, 0, $i-1, 'UTF-8')
+						) if (
+							//will this much of the word--plus hypen--fit?
+							$x + $this->textWidth ($split) + $hypen <= 128-($this->padding * 2)
+						) {
+							//yes; write it
+							$this->writeText (
+								$this->padding + $x, $y * $this->font['h'], "$split-"
+							);
+							if ($this->verbose) echo "$split-\n";
+							
+							//move to the next line and write the remainder
+							$y++; $x = 0;
+							$split = '-'.mb_substr (
+								$word, $i-1, mb_strlen ($word, 'UTF-8') - $i+1, 'UTF-8'
+							).' ';
+							$this->writeText ($this->padding, $y * $this->font['h'], $split);
+							$x += $this->textWidth ($split);
+							if ($this->verbose) echo $split;
+							
+							//move straight to the next word
+							next ($words); continue 2;
+						}
+					}
+					
 					//carriage return
 					$y++; $x = 0;
 					if ($this->verbose) echo "\n";
-					
-					//is the page full?
-					if (($y+1) * $this->font['h'] >= 128) {
-						//start a new page
-						$map = $this->nextPage ($map, $page);
-						$x = 0; $y = 2;
-					}
 				}
 				
 				//write the word
-				$this->writeText ($map, $this->padding + $x, $y * $this->font['h'], 55, $word);
+				$this->writeText ($this->padding + $x, $y * $this->font['h'], $word);
 				if ($this->verbose) echo "$word ";
 				
 				//proceed to the next word
@@ -101,51 +178,16 @@ class McMapBook {
 			
 			//is the page full?
 			if (current ($lines) && $y * $this->font['h'] >= 128) {
-				$map = $this->nextPage ($map, $page);
+				$this->nextPage ();
 				$x = 0; $y = 2;
 			}
 		}
 		
-		$this->savePage ($map, $page);
-		unset ($map);
+		$this->savePage ();
+		unset ($this->map);
 		
 		//return the next available map ID so that additional books can be generated without overwriting
-		return $page++;
-	}
-	
-	private function newPage ($page) {
-		$map = new McMap ();
-		
-		if ($this->verbose) echo "\nPage $page:\n";
-		
-		//right align page number
-		$map->writeText (
-			128 - $this->padding - $this->textWidth ($page), $this->font['h'],
-			55, $this->font['ttf'], $this->font['pts'], $page
-		);
-		
-		return $map;
-	}
-	
-	private function savePage (&$map, $page) {
-		$id = $this->map_id + ($page - 1);
-		if ($this->verbose) imagepng ($map->image, "map_$id.png", 9);
-		return $map->save ($this->path."map_$id.dat");
-	}
-	
-	private function nextPage (&$map, &$page) {
-		$this->savePage ($map, $page);
-		unset ($map);
-		return $this->newPage (++$page, $this->font);
-	}
-	
-	public function textWidth ($text) {
-		$box = imagettfbbox ($this->font['pts'], 0, $this->font['ttf'], $text);
-		return $box[2] - $box[6];
-	}
-	
-	public function writeText ($map, $x, $y, $colour, $text) {
-		return $map->writeText ($x, $y, $colour, $this->font['ttf'], $this->font['pts'], $text);
+		return $this->map_id + $this->page;
 	}
 }
 

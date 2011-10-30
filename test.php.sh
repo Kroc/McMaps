@@ -10,10 +10,12 @@ include 'mcmapbook.php';
 
 $book = new McMapBook (
 	//the full path to the data folder of the Minecraft world, e.g. '~/Application Support/minecraft/saves/World1/data/'
-	'.',
+	'./',
 	//the map ID to begin writing at, i.e. 'map_0.dat'
 	0
 );
+
+$book->verbose = true;
 
 //note: ensure the number of maps required already exist in your minecraft world, if you use McMaps to generate a map that
 //	hasn’t yet been crafted in the game, when you craft it, it will be overwritten. just run your McMaps script again
