@@ -16,7 +16,7 @@ class McMapBook {
 		
 		//"04b-03" - Copyright © 1998-2003 Yuji Yoshimoto - <dsg4.com/04>
 		//'Freeware - You may use them as you like'
-		'04b-03'		=> array ('pts' => 6, 'h' => 8,  'ttf' => '04b03/04B_03__'),
+		'04b-03'		=> array ('pts' => 6, 'h' => 7,  'ttf' => '04b03/04B_03__'),
 		
 		//"Alicia Marie" - Alicia Rios
 		//'Free for personal use'
@@ -32,7 +32,7 @@ class McMapBook {
 		
 		//"Nayupixel" - Nathalie D. - <twitter.com/nnathaliee>
 		//'Free for personal use'
-		'Nayupixel'		=> array ('pts' => 6, 'h' => 8,  'ttf' => 'nayupixel'),
+		'Nayupixel'		=> array ('pts' => 7, 'h' => 8,  'ttf' => 'nayupixel'),
 		
 		//Uni 05 - Craig Kroeger - <miniml.com>
 		//'free to use in commercial or personal work'
@@ -105,7 +105,7 @@ class McMapBook {
 		
 		//start afresh
 		$this->page = 1;
-		$this->newPage ($page);
+		$this->newPage ();
 		
 		$x = 0;	//current insertion point across the page, in pixels
 		$y = 2;	//current line number (not px) down the page
@@ -177,7 +177,7 @@ class McMapBook {
 			if ($this->verbose) echo "\n";
 			
 			//is the page full?
-			if (current ($lines) && $y * $this->font['h'] >= 128) {
+			if (!is_null (current ($lines)) && ($y+1) * $this->font['h'] >= 128) {
 				$this->nextPage ();
 				$x = 0; $y = 2;
 			}
