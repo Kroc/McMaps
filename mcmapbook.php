@@ -65,7 +65,7 @@ class McMapBook {
 	private function newPage () {
 		$this->map = new McMap ();
 		
-		if ($this->verbose) echo "\nPage ".$this->page.":\n";
+		if ($this->verbose) echo "\nPage ".$this->page.": (map_".($this->map_id + ($this->page - 1)).".dat)\n";
 		
 		//right align page number
 		$this->writeText (128 - $this->padding - $this->textWidth ($this->page), $this->font['h'], $this->page);
@@ -108,16 +108,26 @@ class McMapBook {
 		$this->newPage ();
 		
 		$x = 0;	//current insertion point across the page, in pixels
-		$y = 2;	//current line number (not px) down the page
+		$y = 3;	//current line number (not px) down the page
 		
-		//split into lines of text
-		foreach ($lines = explode ("\n", $text) as $line) {
-			//split into individual words
-			$words = explode (' ', $line);
-			while ($word = current ($words)) {
-				//replace tab chars with four spaces
-				$word = str_replace ("\t", "    ", $word);
+		//split into individual words, including line-breaks
+		foreach (explode (" ", preg_replace ("/\r?\n/", " \n ", $text)) as $word) {
+			//replace tab chars with four spaces
+			$word = str_replace ("\t", "    ", $word);
+			
+			switch ($word) {
+			case "\n":
+				if ($this->verbose) echo "\n";
+				$y++; $x = 0;
 				
+				if (($y+1) * $this->font['h'] >= 128) {
+					//start a new page
+					$this->nextPage ();
+					$x = 0; $y = 3;
+					continue;
+				}
+				
+			default:
 				//will this word fit on the end of the line?
 				if ($x + $this->textWidth ($word) > 128-($this->padding * 2)) {
 					//no; is the page full?
@@ -125,7 +135,7 @@ class McMapBook {
 					if (($y+2) * $this->font['h'] >= 128) {
 						//start a new page
 						$this->nextPage ();
-						$x = 0; $y = 2;
+						$x = 0; $y = 3;
 						
 					//no; can we hyphenate this word?
 					} elseif ($this->hypenate && mb_strlen ($word) >= 6) {
@@ -155,7 +165,7 @@ class McMapBook {
 							if ($this->verbose) echo $split;
 							
 							//move straight to the next word
-							next ($words); continue 2;
+							continue 2;
 						}
 					}
 					
@@ -169,17 +179,7 @@ class McMapBook {
 				if ($this->verbose) echo "$word ";
 				
 				//proceed to the next word
-				$x += $this->textWidth ($word) + $space; next ($words);
-			}
-			
-			//line-break
-			next ($lines); $y++; $x = 0;
-			if ($this->verbose) echo "\n";
-			
-			//is the page full?
-			if (!is_null (current ($lines)) && ($y+1) * $this->font['h'] >= 128) {
-				$this->nextPage ();
-				$x = 0; $y = 2;
+				$x += $this->textWidth ($word) + $space;
 			}
 		}
 		
