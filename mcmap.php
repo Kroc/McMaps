@@ -225,9 +225,14 @@ class McMap {
 		//which element is the 'colors' array?
 		foreach ($this->nbt->root[0]['value'][0]['value'] as &$node) if ($node['name'] == 'colors') break;
 		
-		for ($y=0; $y < 128; $y++) for ($x=0; $x < 128 ; $x++)
-			@imagesetpixel ($this->image, $x, $y, $this->palette[$node['value'][$x + ($y*128)]])
-		;
+		for ($y=0; $y < 128; $y++) for ($x=0; $x < 128 ; $x++) {
+			$color_index = $node['value'][$x + ($y*128)];
+			
+			// if data is negative, add 256 to value (i.e. using map generated from http://www.minecraftforum.net/topic/661481-windowsmac-version-107-map-item-viewer-editor-and-painter/)
+			if ($node['value'][$x + ($y*128)] < 0) $color_index+=256;
+			
+			@imagesetpixel ($this->image, $x, $y, $this->palette[$color_index]);
+		}
 	}
 	
 	/* save: take the GD image, put it into the byte array, and save to disk
