@@ -4,47 +4,49 @@
    copyright © cc-by 2011 Kroc Camen <camendesign.com>
    uses NBT Decoder / Encoder for PHP by Justin Martin */
 
-require_once 'nbt/nbt.class.php';
+namespace Kroc\McMaps;
 
 //set font directory
-putenv ('GDFONTPATH='.realpath (dirname (__FILE__).'/fonts'));
+use Nbt\Service;
+
+putenv ('GDFONTPATH='.realpath (dirname (__FILE__).'/../fonts'));
 
 class McMap {
 	private $nbt;			//the NBT class for reading/writing the file structure
-	
+
 	public $image;			//the GD image handle
 	public $palette = array ();	//Notch’s palette for map items
-	
+
 	/* ============================================================================================================== */
-	
+
 	function __construct () {
 		//instantiate a new NBT strucutre
-		$this->nbt = new NBT ();
+		$this->nbt = new Service ();
 		//populate the default data for a Minecraft map item
-		$this->nbt->root[0] = array ('name' => '', 'type' => NBT::TAG_COMPOUND, 'value' => array (
-			array ('name' => 'data', 'type' => NBT::TAG_COMPOUND, 'value' => array (
+		$this->nbt->root[0] = array ('name' => '', 'type' => Service::TAG_COMPOUND, 'value' => array (
+			array ('name' => 'data', 'type' => Service::TAG_COMPOUND, 'value' => array (
 				//1:1 zoom
-				array ('name' => 'scale',	'type' => NBT::TAG_BYTE, 	'value' => 0),
+				array ('name' => 'scale',	'type' => Service::TAG_BYTE, 	'value' => 0),
 				//'overworld' (vs 'nether')
-				array ('name' => 'dimenson',	'type' => NBT::TAG_BYTE, 	'value' => 0),
+				array ('name' => 'dimenson',	'type' => Service::TAG_BYTE, 	'value' => 0),
 				//default map size
-				array ('name' => 'height',	'type' => NBT::TAG_SHORT,	'value' => 128),
-				array ('name' => 'width',	'type' => NBT::TAG_SHORT,	'value' => 128),
+				array ('name' => 'height',	'type' => Service::TAG_SHORT,	'value' => 128),
+				array ('name' => 'width',	'type' => Service::TAG_SHORT,	'value' => 128),
 				//locate the map somewhere where the player is unlikely to ever step
-				array ('name' => 'xCenter',	'type' => NBT::TAG_INT,		'value' => -12500000),
-				array ('name' => 'zCenter',	'type' => NBT::TAG_INT,		'value' => -12500000),
+				array ('name' => 'xCenter',	'type' => Service::TAG_INT,		'value' => -12500000),
+				array ('name' => 'zCenter',	'type' => Service::TAG_INT,		'value' => -12500000),
 				//start with a blank map
 				array (
-					'name' => 'colors', 'type' => NBT::TAG_BYTE_ARRAY,
+					'name' => 'colors', 'type' => Service::TAG_BYTE_ARRAY,
 					//create an empty bytearray for the 128x128 map image
 					'value' => array_fill (0, (128 * 128) - 1, 0)
 				)
 			))
 		));
-		
+
 		//create a blank canvas for the image
 		$this->image = imagecreate (128, 128);
-		
+
 		//assign the colour palette
 		foreach (array (
 			//see <minecraftwiki.net/wiki/Map_Item_Format#Color_table>
@@ -52,7 +54,7 @@ class McMap {
 			array ('r' => 255,	'g' => 0,	'b' => 255),	//1  Not explored
 			array ('r' => 255,	'g' => 0,	'b' => 255),	//2  Not explored
 			array ('r' => 255,	'g' => 0,	'b' => 255),	//3  Not explored
-			
+
 			array ('r' => 89,	'g' => 125,	'b' => 39),	//4  Grass
 			array ('r' => 109,	'g' => 153,	'b' => 48),	//5  Grass
 			array ('r' => 127,	'g' => 178,	'b' => 56),	//6  Grass
@@ -105,7 +107,7 @@ class McMap {
 			array ('r' => 89, 	'g' => 71,	'b' => 43),	//53 Log/Tree/Wood
 			array ('r' => 104,	'g' => 83,	'b' => 50),	//54 Log/Tree/Wood
 			array ('r' => 55, 	'g' => 43,	'b' => 26),	//55 Log/Tree/Wood
-			
+
 			array ('r' => 180,	'g' => 177,	'b' => 172), 	//56
 			array ('r' => 220,	'g' => 217,	'b' => 211), 	//57
 			array ('r' => 255,	'g' => 252,	'b' => 245), 	//58
@@ -200,41 +202,41 @@ class McMap {
 		//the ‘void’
 		imagecolortransparent ($this->image, $this->palette[0]);
 	}
-	
+
 	function __destruct () {
 		//release handles, everything else should go away by itself
 		unset ($this->nbt);
 		imagedestroy ($this->image);
 	}
-	
-	/* ============================================================================================================== */	
-	
+
+	/* ============================================================================================================== */
+
 	public function writeText ($x, $y, $color_id, $ttf, $pts, $text) {
 		return imagettftext (
 			//the negative version of the colour index turns anti-aliasing off (crashes Minecraft otherwise)
 			$this->image, $pts, 0, $x, $y, -1 * $this->palette[$color_id], $ttf, $text
 		);
 	}
-	
+
 	/* load: read in a map file and paint it onto the GD image for further manipulation
 	   ---------------------------------------------------------------------------------------------------------------*/
 	public function load ($file) {
 		$this->nbt->purge ();
 		$this->nbt->loadFile ($file);
-		
+
 		//which element is the 'colors' array?
 		foreach ($this->nbt->root[0]['value'][0]['value'] as &$node) if ($node['name'] == 'colors') break;
-		
+
 		for ($y=0; $y < 128; $y++) for ($x=0; $x < 128 ; $x++) {
 			$color_index = $node['value'][$x + ($y*128)];
-			
+
 			// if data is negative, add 256 to value (i.e. using map generated from http://www.minecraftforum.net/topic/661481-windowsmac-version-107-map-item-viewer-editor-and-painter/)
 			if ($node['value'][$x + ($y*128)] < 0) $color_index+=256;
-			
+
 			@imagesetpixel ($this->image, $x, $y, $this->palette[$color_index]);
 		}
 	}
-	
+
 	/* save: take the GD image, put it into the byte array, and save to disk
 	   -------------------------------------------------------------------------------------------------------------- */
 	public function save ($file) {
@@ -245,14 +247,14 @@ class McMap {
 		//save the NBT file to disk
 		return $this->nbt->writeFile ($file);
 	}
-	
+
 	/* setImage: resize & palettize a GD image source onto the map
 	   -------------------------------------------------------------------------------------------------------------- */
 	public function setImage ($src) {
 		//resize the source image to 128x128
 		$buffer = imagecreatetruecolor (128, 128);
 		imagecopyresized ($buffer, $src, 0, 0, 0, 0, 128, 128, imagesx ($src), imagesy ($src));
-		
+
 		//copy the image pixel-by-pixel to the map, changing the colours to fit Minecraft
 		for ($y=0; $y < 128; $y++) for ($x=0; $x < 128 ; $x++) {
 			//get the 32-bit colour
@@ -266,5 +268,3 @@ class McMap {
 		unset ($buffer);
 	}
 }
-
-?>
