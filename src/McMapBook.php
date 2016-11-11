@@ -4,6 +4,8 @@
    copyright © cc-by 2011 Kroc Camen <camendesign.com>
    uses NBT Decoder / Encoder for PHP by Justin Martin */
 
+namespace Kroc\McMaps;
+
 class McMapBook {
 	public $path    = '';		//the full path to the data folder to write the maps into
 	public $map_id  = 0;		//the map number to begin writing at
@@ -63,7 +65,7 @@ class McMapBook {
 	}
 	
 	private function newPage () {
-		$this->map = new McMap ();
+		$this->map = new McMap() ;
 		
 		if ($this->verbose) echo "\nPage ".$this->page.": (map_".($this->map_id + ($this->page - 1)).".dat)\n";
 		
@@ -192,6 +194,3 @@ class McMapBook {
 		return $this->map_id + $this->page;
 	}
 }
-
-
-?>

@@ -6,8 +6,10 @@
    it won’t have write access to the Minecraft directory
 */
 
-include '../mcmap.php';
-include '../mcmapbook.php';
+use Kroc\McMaps\McMap;
+use Kroc\McMaps\McMapBook;
+
+require __DIR__ . '/../vendor/autoload.php';
 
 
 /* put any image on a Minecraft map item:

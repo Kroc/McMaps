@@ -1,0 +1,22 @@
+{
+    "name": "krock/mcmaps",
+    "description": "PHP script to read / write custom Minecraft map item images",
+    "type": "library",
+    "license": "Creative Commons Attribution 3.0 Unported (CC BY 3.0)",
+    "authors": [
+        {
+            "name": "Kroc Camen",
+            "email": "kroc@camendesign.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "ext-gd": "*",
+        "rickselby/nbt": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kroc\\McMaps\\": "src/"
+        }
+    }
+}
